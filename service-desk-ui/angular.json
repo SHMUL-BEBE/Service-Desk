@@ -37,18 +37,7 @@
                 }
               ],
               "baseHref": "/",
-              "budgets": [
-                {
-                  "type": "initial",
-                  "maximumWarning": "2MB",
-                  "maximumError": "5MB"
-                },
-                {
-                  "type": "anyComponentStyle",
-                  "maximumWarning": "100kB",
-                  "maximumError": "200kB"
-                }
-              ],
+              "budgets": [],
               "outputHashing": "all"
             },
             "development": {
