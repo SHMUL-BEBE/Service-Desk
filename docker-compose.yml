@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: service-desk-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 7285
+      POSTGRES_DB: servicedesk
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./service-desk-api
+    container_name: service-desk-backend
+    environment:
+      DATABASE_URL: postgresql://postgres:7285@postgres:5432/servicedesk
+      JWT_SECRET: secret-key-change-in-production
+      PORT: 8080
+      CORS_ORIGIN: http://localhost
+    ports:
+      - "3000:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build: ./service-desk-ui
+    container_name: service-desk-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

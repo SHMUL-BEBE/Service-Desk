@@ -1,0 +1,127 @@
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-header">
+      <img class="icon-placeholder" src="assets/icons/logo.svg" alt="логотип">
+      <h1>Service Desk</h1>
+      <p>Автоматизация сервисного центра</p>
+    </div>
+
+    <!-- Вкладки -->
+    <div class="tabs">
+      <button 
+        type="button"
+        class="tab-btn"
+        [class.active]="activeTab === 'login'"
+        (click)="activeTab = 'login'">
+        Вход
+      </button>
+      <button 
+        type="button"
+        class="tab-btn"
+        [class.active]="activeTab === 'register'"
+        (click)="activeTab = 'register'">
+        Регистрация
+      </button>
+    </div>
+
+    <!-- Форма входа -->
+    <form *ngIf="activeTab === 'login'" (ngSubmit)="onLogin()">
+      <!-- Сообщение об ошибке -->
+      <div *ngIf="errorMessage && !isBlocked" class="error-message">
+        {{ errorMessage }}
+      </div>
+
+      <!-- Сообщение о блокировке -->
+      <div *ngIf="isBlocked && blockedUser" class="block-message">
+        <strong>Пользователь {{ blockedUser }} заблокирован</strong>
+        <p>Попробуйте через: {{ getBlockTimeString() }}</p>
+      </div>
+
+      <div class="form-group">
+        <input
+          type="text"
+          [(ngModel)]="login"
+          name="login"
+          placeholder="Логин"
+          [disabled]="isBlocked"
+          (input)="checkUserBlock()"
+          required>
+      </div>
+
+      <div class="form-group">
+        <input
+          type="password"
+          [(ngModel)]="password"
+          name="password"
+          placeholder="Пароль"
+          [disabled]="isBlocked"
+          required>
+      </div>
+
+      <button type="submit" class="btn-login" [disabled]="isLoading || isBlocked">
+        {{ isLoading ? 'Вход...' : 'Войти' }}
+      </button>
+    </form>
+
+    <!-- Форма регистрации -->
+    <form *ngIf="activeTab === 'register'" (ngSubmit)="onRegister()">
+      <div class="form-group">
+        <input
+          type="text"
+          [(ngModel)]="registerData.fullName"
+          name="fullName"
+          placeholder="ФИО *"
+          required>
+      </div>
+
+      <div class="form-group">
+        <input
+          type="email"
+          [(ngModel)]="registerData.email"
+          name="email"
+          placeholder="Email *"
+          required>
+      </div>
+
+      <div class="form-group">
+        <input
+          type="tel"
+          [(ngModel)]="registerData.phone"
+          name="phone"
+          placeholder="Телефон *"
+          required>
+      </div>
+
+      <div class="form-group">
+        <input
+          type="text"
+          [(ngModel)]="registerData.username"
+          name="username"
+          placeholder="Логин *"
+          required>
+      </div>
+
+      <div class="form-group">
+        <input
+          type="password"
+          [(ngModel)]="registerData.password"
+          name="password"
+          placeholder="Пароль (мин. 6 символов) *"
+          required>
+      </div>
+
+      <div class="form-group">
+        <input
+          type="password"
+          [(ngModel)]="registerData.confirmPassword"
+          name="confirmPassword"
+          placeholder="Подтвердите пароль *"
+          required>
+      </div>
+
+      <button type="submit" class="btn-login" [disabled]="isLoading">
+        {{ isLoading ? 'Регистрация...' : 'Зарегистрироваться' }}
+      </button>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,198 @@
+<div class="engineer-page">
+  <!-- ===== ВЕРХНЯЯ ПАНЕЛЬ ===== -->
+  <div class="top-panel">
+    <div class="panel-left">
+      <i class="fas fa-microchip panel-icon"></i>
+      <div>
+        <h1>Рабочее место инженера</h1>
+        <p>{{ user.fullName || 'Инженер' }} - Назначенные заявки и управление ремонтами</p>
+      </div>
+    </div>
+    <button class="logout-btn" (click)="logout()">
+      <i class="fas fa-sign-out-alt"></i> Выход
+    </button>
+  </div>
+
+  <!-- ===== СТАТИСТИКА ===== -->
+  <div class="stats">
+    <div class="stat-card">
+      <i class="fas fa-tasks stat-icon"></i>
+      <div>
+        <h3>{{ assignedRequests.length }}</h3>
+        <p>Назначенных заявок</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <i class="fas fa-check-circle stat-icon"></i>
+      <div>
+        <h3>{{ completedCount }}</h3>
+        <p>Выполнено за месяц</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== НАЗНАЧЕННЫЕ ЗАЯВКИ ===== -->
+  <div class="card">
+    <div class="card-title">
+      <i class="fas fa-clipboard-list card-icon"></i>
+      <h2>Назначенные заявки</h2>
+    </div>
+    <div class="request-list">
+      <div class="request-item" *ngFor="let request of assignedRequests">
+        <div class="request-info">
+          <span class="id-badge">#{{ request.id_request }}</span>
+          <span class="request-title">{{ request.equipment }}</span>
+          <span class="request-desc" [title]="request.description">
+            {{ request.description | slice:0:60 }}{{ request.description?.length > 60 ? '...' : '' }}
+            <span *ngIf="request.description?.length > 60" class="more-link" (click)="openRequestDetails(request)">
+              <i class="fas fa-eye"></i>
+            </span>
+          </span>
+        </div>
+        <div class="request-actions">
+          <span class="status-badge" [ngClass]="{
+            'status-new': request.status === 'Новая',
+            'status-work': request.status === 'В работе',
+            'status-done': request.status === 'Выполнена',
+            'status-wait': request.status === 'Ожидание'
+          }">
+            {{ request.status }}
+          </span>
+          <button class="btn-comment" (click)="openCommentModal(request)">
+            <i class="fas fa-comment"></i>
+          </button>
+          <button class="btn-primary" (click)="startWork(request)" *ngIf="request.status === 'Новая'">
+            <i class="fas fa-play"></i> Начать
+          </button>
+          <button class="btn-success" (click)="completeWork(request)" *ngIf="request.status === 'В работе'">
+            <i class="fas fa-check"></i> Завершить
+          </button>
+          <span class="completed-icon" *ngIf="request.status === 'Выполнена'">
+            <i class="fas fa-check-circle"></i>
+          </span>
+        </div>
+      </div>
+      <div *ngIf="assignedRequests.length === 0" class="empty-state">
+        <i class="fas fa-inbox"></i>
+        <p>Нет назначенных заявок</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== СПИСАНИЕ МАТЕРИАЛОВ + ВЫПОЛНЕННЫЕ РАБОТЫ ===== -->
+  <div class="grid-2">
+    <!-- Списание материалов -->
+    <div class="card">
+      <div class="card-title">
+        <i class="fas fa-boxes card-icon"></i>
+        <h2>Списание материалов</h2>
+      </div>
+      <div class="form-group">
+        <label>Выбрать запчасть</label>
+        <select [(ngModel)]="selectedPart">
+          <option *ngFor="let part of spareParts" [ngValue]="part">
+            {{ part.name }} ({{ part.quantity }} шт.)
+          </option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Количество</label>
+        <input type="number" [(ngModel)]="partQuantity" min="1">
+      </div>
+      <button class="btn-primary" (click)="writeOffPart()" [disabled]="isLoading">
+        <i class="fas fa-minus-circle"></i> Списать по заявке
+      </button>
+    </div>
+
+    <!-- Выполненные работы -->
+    <div class="card">
+      <div class="card-title">
+        <i class="fas fa-check-double card-icon"></i>
+        <h2>Выполненные работы</h2>
+      </div>
+      <div class="completed-list">
+        <div class="completed-item" *ngFor="let work of completedWorks">
+          <div class="work-info">
+            <span class="work-id">#{{ work.request_id }}</span>
+            <span class="work-desc">{{ work.description }}</span>
+          </div>
+          <span class="work-date">{{ formatDate(work.date) }}</span>
+        </div>
+        <div *ngIf="completedWorks.length === 0" class="empty-state small">
+          <i class="fas fa-check-circle"></i>
+          <p>Нет выполненных работ</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= МОДАЛЬНОЕ ОКНО ДЛЯ ДЕТАЛЕЙ ЗАЯВКИ ================= -->
+<div *ngIf="detailsModalVisible" class="modal-overlay" (click)="closeDetailsModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Заявка #{{ detailsRequest?.id_request }}</h2>
+      <button class="modal-close" (click)="closeDetailsModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Оборудование</label>
+        <div class="info-display">{{ detailsRequest?.equipment }}</div>
+      </div>
+      <div class="form-group">
+        <label>Статус</label>
+        <div class="info-display">
+          <span class="status-badge" [ngClass]="{
+            'status-new': detailsRequest?.status === 'Новая',
+            'status-work': detailsRequest?.status === 'В работе',
+            'status-done': detailsRequest?.status === 'Выполнена',
+            'status-wait': detailsRequest?.status === 'Ожидание'
+          }">
+            {{ detailsRequest?.status }}
+          </span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Полное описание</label>
+        <div class="info-display" style="white-space: pre-wrap; min-height: 100px;">
+          {{ detailsRequest?.description }}
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="secondary-btn" (click)="closeDetailsModal()">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= МОДАЛЬНОЕ ОКНО ДЛЯ КОММЕНТАРИЕВ ================= -->
+<div *ngIf="commentModalVisible" class="modal-overlay" (click)="closeCommentModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Комментарии к заявке #{{ commentRequest?.id_request }}</h2>
+      <button class="modal-close" (click)="closeCommentModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="comments-list" *ngIf="commentRequest?.comments && commentRequest?.comments.length > 0">
+        <div *ngFor="let comment of commentRequest.comments" class="comment-item-modal">
+          <span class="comment-date-modal">{{ formatDate(comment.created_at) }}</span>
+          <span class="comment-text-modal">{{ comment.text }}</span>
+        </div>
+      </div>
+      <div class="comments-list" *ngIf="!commentRequest?.comments || commentRequest?.comments.length === 0">
+        <p class="text-muted">Нет комментариев</p>
+      </div>
+      
+      <div class="form-group">
+        <label>Добавить комментарий</label>
+        <textarea [(ngModel)]="commentText" rows="4" class="form-control" placeholder="Введите комментарий..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="secondary-btn" (click)="closeCommentModal()">Отмена</button>
+      <button class="primary-btn" (click)="addCommentModal()" [disabled]="!commentText.trim()">
+        Добавить комментарий
+      </button>
+    </div>
+  </div>
+</div>

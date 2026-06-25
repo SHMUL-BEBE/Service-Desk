@@ -1,0 +1,162 @@
+<div class="page">
+  <div class="top-panel">
+    <div class="panel-left">
+      <i class="fas fa-tasks panel-icon"></i>
+      <div>
+        <h1>Рабочее место диспетчера</h1>
+        <p>Управление заявками и назначение инженеров</p>
+      </div>
+    </div>
+    <div class="panel-right">
+      <button class="refresh-btn" (click)="loadRequests()">
+        <i class="fas fa-sync-alt"></i> Обновить
+      </button>
+      <button class="logout-btn" (click)="logout()">
+        <i class="fas fa-sign-out-alt"></i> Выход
+      </button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card">
+      <i class="fas fa-inbox stat-icon"></i>
+      <div>
+        <h3>{{ requests.length }}</h3>
+        <p>Всего заявок</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <i class="fas fa-plus-circle stat-icon"></i>
+      <div>
+        <h3>{{ newCount }}</h3>
+        <p>Новые</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <i class="fas fa-tools stat-icon"></i>
+      <div>
+        <h3>{{ workCount }}</h3>
+        <p>В работе</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <i class="fas fa-check-circle stat-icon"></i>
+      <div>
+        <h3>{{ doneCount }}</h3>
+        <p>Выполнено</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="filters">
+    <div class="search-wrap">
+      <i class="fas fa-search search-icon"></i>
+      <input type="text" placeholder="Поиск по номеру или клиенту" [(ngModel)]="search">
+    </div>
+    <select [(ngModel)]="selectedStatus">
+      <option value="">Все статусы</option>
+      <option value="Новая">Новая</option>
+      <option value="В работе">В работе</option>
+      <option value="Ожидание">Ожидание</option>
+      <option value="Выполнена">Выполнена</option>
+      <option value="Закрыта">Закрыта</option>
+    </select>
+    <select [(ngModel)]="selectedEngineer">
+      <option value="">Все инженеры</option>
+      <option *ngFor="let engineer of engineers" [value]="engineer.id_engineer">
+        {{ engineer.full_name }}
+      </option>
+    </select>
+  </div>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Клиент</th>
+          <th>Оборудование</th>
+          <th>Описание</th>
+          <th>Инженер</th>
+          <th>Статус</th>
+          <th>Действие</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let request of filteredRequests()">
+          <td><span class="id-badge">#{{ request.id_request }}</span></td>
+          <td>{{ request.client }}</td>
+          <td>{{ request.equipment }}</td>
+          <td>{{ request.description | slice:0:80 }}{{ request.description?.length > 80 ? '...' : '' }}</td>
+          <td>
+            <!-- Отображаем имя инженера в select -->
+            <select [(ngModel)]="request.engineer_id" (change)="assignEngineer(request)">
+              <option [ngValue]="null">Не назначен</option>
+              <option *ngFor="let engineer of engineers" [ngValue]="engineer.id_engineer" [selected]="engineer.id_engineer === request.engineer_id">
+                {{ engineer.full_name }}
+              </option>
+            </select>
+          </td>
+          <td>
+            <select 
+              [(ngModel)]="request.status" 
+              (change)="updateStatus(request)"
+              class="status-select"
+              [ngClass]="getStatusSelectClass(request.status)">
+              <option value="Новая">Новая</option>
+              <option value="В работе">В работе</option>
+              <option value="Ожидание">Ожидание</option>
+              <option value="Выполнена">Выполнена</option>
+              <option value="Закрыта">Закрыта</option>
+            </select>
+          </td>
+          <td>
+            <div class="action-buttons">
+              <button class="save-btn" (click)="save(request)" [disabled]="!hasChanges(request)">
+                <i class="fas fa-save"></i>
+              </button>
+              <button class="cancel-btn" (click)="cancelChanges(request)" [disabled]="!hasChanges(request)">
+                <i class="fas fa-undo"></i>
+              </button>
+              <button class="comment-btn" (click)="openCommentModal(request)">
+                <i class="fas fa-comment"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ================= МОДАЛЬНОЕ ОКНО ДЛЯ КОММЕНТАРИЕВ ================= -->
+<div *ngIf="commentModalVisible" class="modal-overlay" (click)="closeCommentModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Комментарии к заявке #{{ commentRequest?.id_request }}</h2>
+      <button class="modal-close" (click)="closeCommentModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="comments-list" *ngIf="commentRequest?.comments && commentRequest?.comments.length > 0">
+        <div *ngFor="let comment of commentRequest.comments" class="comment-item-modal">
+          <span class="comment-date-modal">{{ formatDate(comment.created_at) }}</span>
+          <span class="comment-text-modal">{{ comment.text }}</span>
+        </div>
+      </div>
+      <div class="comments-list" *ngIf="!commentRequest?.comments || commentRequest?.comments.length === 0">
+        <p class="text-muted">Нет комментариев</p>
+      </div>
+      
+      <div class="form-group">
+        <label>Добавить комментарий</label>
+        <textarea [(ngModel)]="commentText" rows="4" class="form-control" placeholder="Введите комментарий..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="secondary-btn" (click)="closeCommentModal()">Отмена</button>
+      <button class="primary-btn" (click)="addComment()" [disabled]="!commentText.trim()">
+        Добавить комментарий
+      </button>
+    </div>
+  </div>
+</div>

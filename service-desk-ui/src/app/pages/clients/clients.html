@@ -1,0 +1,364 @@
+<div class="client-layout">
+
+  <!-- ===== ЛЕВАЯ ПАНЕЛЬ ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <img src="assets/icons/logo.svg" class="logo" alt="logo">
+      <h2>Service Desk</h2>
+      <p>Личный кабинет клиента</p>
+    </div>
+
+    <nav class="sidebar-menu">
+      <button class="menu-item" [class.active]="activeTab === 'profile'" (click)="activeTab = 'profile'">
+        <img src="assets/icons/profile.svg" class="menu-icon" alt="">
+        <span>Мой профиль</span>
+      </button>
+
+      <button class="menu-item" [class.active]="activeTab === 'create'" (click)="activeTab = 'create'">
+        <img src="assets/icons/create.svg" class="menu-icon" alt="">
+        <span>Создать заявку</span>
+      </button>
+
+      <button class="menu-item" [class.active]="activeTab === 'requests'" (click)="activeTab = 'requests'">
+        <img src="assets/icons/request.svg" class="menu-icon" alt="">
+        <span>Мои заявки</span>
+      </button>
+
+      <button class="menu-item" [class.active]="activeTab === 'history'" (click)="activeTab = 'history'">
+        <img src="assets/icons/history.svg" class="menu-icon" alt="">
+        <span>История заявок</span>
+      </button>
+    </nav>
+
+    <button class="logout-button" (click)="logout()">
+      <span>Выход →</span>
+    </button>
+  </aside>
+
+  <!-- ===== ОСНОВНАЯ ОБЛАСТЬ ===== -->
+  <main class="content">
+
+    <!-- ================= ПРОФИЛЬ ================= -->
+    <section *ngIf="activeTab === 'profile'">
+      <div class="page-header">
+        <h1>Мой профиль</h1>
+        <p>Информация о вашей учетной записи</p>
+      </div>
+
+      <div *ngIf="isLoading" class="loading-overlay">
+        <div class="loading-spinner">
+          <div class="spinner"></div>
+          <p>Загрузка данных...</p>
+        </div>
+      </div>
+
+      <div class="profile-card" *ngIf="!isLoading">
+        <div *ngIf="errorMessage" class="error-message">
+          <span>{{ errorMessage }}</span>
+          <div class="error-actions">
+            <button (click)="loadClient()" class="primary-btn">Повторить</button>
+          </div>
+        </div>
+
+        <form (ngSubmit)="saveProfile()" class="profile-form" *ngIf="!errorMessage && client.id_client">
+          <div class="profile-fields">
+            <div class="field">
+              <label for="fullName">ФИО</label>
+              <input id="fullName" type="text" [value]="client.full_name" readonly class="form-control">
+            </div>
+
+            <div class="field">
+              <label for="email">Email</label>
+              <input id="email" type="email" [value]="client.email" readonly class="form-control">
+            </div>
+
+            <div class="field">
+              <label for="phone">Телефон</label>
+              <input id="phone" type="tel" [value]="client.phone" readonly class="form-control">
+            </div>
+
+            <div class="field">
+              <label for="login">Логин</label>
+              <input id="login" type="text" [value]="client.login" readonly class="form-control">
+            </div>
+
+            <div class="field">
+              <label for="newPassword">Новый пароль</label>
+              <input id="newPassword" type="password" [(ngModel)]="newPassword" name="newPassword" class="form-control" placeholder="Введите новый пароль (мин. 6 символов)">
+              <small class="hint">Оставьте пустым, чтобы не менять пароль</small>
+            </div>
+          </div>
+
+          <div class="profile-actions">
+            <button type="submit" class="primary-btn" [disabled]="isLoading">
+              <span *ngIf="!isLoading">Изменить пароль</span>
+              <span *ngIf="isLoading">Сохранение...</span>
+            </button>
+          </div>
+        </form>
+
+        <div *ngIf="!errorMessage && !client.id_client" class="info-message">
+          <p>Данные клиента не загружены. Проверьте подключение к серверу.</p>
+          <button (click)="loadClient()" class="primary-btn" style="margin-top: 16px;">Загрузить данные</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= СОЗДАНИЕ ЗАЯВКИ ================= -->
+    <section *ngIf="activeTab === 'create'">
+      <div class="page-header">
+        <h1>Создать заявку</h1>
+        <p>Заполните все поля для отправки заявки в сервисный центр</p>
+      </div>
+
+      <div class="card create-request-card">
+        <form (ngSubmit)="createRequest()" class="create-request-form">
+          <div class="form-group">
+            <label for="equipmentSelect">Выбор оборудования <span class="required">*</span></label>
+            <select 
+              id="equipmentSelect"
+              [(ngModel)]="newRequest.equipmentId" 
+              name="equipmentId"
+              class="form-control"
+              required>
+              <option value="">Выберите оборудование</option>
+              <option *ngFor="let eq of equipments" [value]="eq.id_equipment">
+                {{ eq.name }} ({{ eq.serial_number }})
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="categorySelect">Категория услуги <span class="required">*</span></label>
+            <select 
+              id="categorySelect"
+              [(ngModel)]="newRequest.categoryId" 
+              name="categoryId"
+              class="form-control"
+              required>
+              <option value="">Выберите категорию</option>
+              <option *ngFor="let cat of categories" [value]="cat.id_category">
+                {{ cat.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="requestTitle">Название <span class="required">*</span></label>
+            <input 
+              id="requestTitle"
+              type="text"
+              [(ngModel)]="newRequest.title" 
+              name="title"
+              class="form-control" 
+              placeholder="Например: Не включается ноутбук"
+              required>
+          </div>
+
+          <div class="form-group">
+            <label for="requestDescription">Описание проблемы <span class="required">*</span></label>
+            <textarea 
+              id="requestDescription"
+              rows="6" 
+              [(ngModel)]="newRequest.description" 
+              name="description"
+              class="form-control" 
+              placeholder="Опишите проблему максимально подробно"
+              required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="fileInput">Прикрепление файлов</label>
+            <input 
+              id="fileInput"
+              type="file" 
+              (change)="onFileSelected($event)" 
+              multiple 
+              accept="image/*" 
+              class="form-control file-input">
+            <small class="hint">Поддерживаются изображения (jpg, png, gif)</small>
+            <div class="file-list" *ngIf="newRequest.files.length > 0">
+              <div *ngFor="let file of newRequest.files; let i = index" class="file-item">
+                <span>{{ file.name }} ({{ (file.size / 1024).toFixed(2) }} KB)</span>
+                <button type="button" class="remove-file" (click)="removeFile(i)">×</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="primary-btn" [disabled]="isLoading">
+              <span *ngIf="!isLoading">Создать заявку</span>
+              <span *ngIf="isLoading">Отправка...</span>
+            </button>
+            <button type="button" class="secondary-btn" (click)="clearForm()">Очистить форму</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ================= МОИ ЗАЯВКИ ================= -->
+    <section *ngIf="activeTab === 'requests'">
+      <div class="page-header">
+        <h1>Мои заявки</h1>
+        <p>Всего заявок: {{ filteredRequests.length }}</p>
+      </div>
+
+      <div class="filters">
+        <div class="filter-group">
+          <label>Статус:</label>
+          <select [(ngModel)]="filters.status" (change)="applyFilters()" class="form-control">
+            <option value="">Все</option>
+            <option value="new">Новая</option>
+            <option value="in_progress">В работе</option>
+            <option value="waiting">Ожидание</option>
+            <option value="completed">Завершена</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>Дата с:</label>
+          <input type="date" [(ngModel)]="filters.dateFrom" (change)="applyFilters()" class="form-control">
+        </div>
+
+        <div class="filter-group">
+          <label>Дата по:</label>
+          <input type="date" [(ngModel)]="filters.dateTo" (change)="applyFilters()" class="form-control">
+        </div>
+
+        <button class="secondary-btn" (click)="clearFilters()">Очистить фильтры</button>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>ДАТА</th>
+              <th>ОПИСАНИЕ</th>
+              <th>СТАТУС</th>
+              <th>ДЕЙСТВИЕ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let req of filteredRequests">
+              <td>{{ formatDate(req.created_at) }}</td>
+              <td>{{ req.title }}</td>
+              <td>
+                <span class="status-badge" [ngClass]="getStatusClass(req.status)">
+                  {{ getStatusLabel(req.status) }}
+                </span>
+              </td>
+              <td>
+                <button class="edit-btn" (click)="openEditModal(req)">
+                  <img src="assets/icons/edit.svg" alt="Редактировать" class="action-icon">
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="filteredRequests.length === 0">
+              <td colspan="4" class="text-center">Заявок не найдено</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================= ИСТОРИЯ ЗАЯВОК ================= -->
+    <section *ngIf="activeTab === 'history'">
+      <div class="page-header">
+        <h1>История заявок</h1>
+        <p>Все обращения с хронологией изменений</p>
+      </div>
+
+      <div class="history-timeline">
+        <div *ngFor="let req of history" class="history-item">
+          <div class="history-header">
+            <span class="history-number">Заявка #{{ req.id_request }}</span>
+            <span class="history-date">{{ formatDate(req.created_at) }}</span>
+          </div>
+          <div class="history-body">
+            <h4>{{ req.title }}</h4>
+            <p>{{ req.description }}</p>
+            
+            <div class="history-comments" *ngIf="req.comments && req.comments.length > 0">
+              <div class="comments-title">Комментарии:</div>
+              <div *ngFor="let comment of req.comments" class="comment-item">
+                <span class="comment-date">{{ formatDate(comment.created_at) }}</span>
+                <span class="comment-text">{{ comment.text }}</span>
+              </div>
+            </div>
+            
+            <div class="history-changes" *ngIf="req.changes && req.changes.length > 0">
+              <div *ngFor="let change of req.changes" class="change-item">
+                <span class="change-date">{{ formatDate(change.date) }}</span>
+                <span class="status-badge" [ngClass]="getStatusClass(change.status)">
+                  {{ getStatusLabel(change.status) }}
+                </span>
+                <span class="change-comment" *ngIf="change.comment">{{ change.comment }}</span>
+              </div>
+            </div>
+            <div class="history-changes" *ngIf="!req.changes || req.changes.length === 0">
+              <p class="text-muted">Нет истории изменений</p>
+            </div>
+          </div>
+        </div>
+        <div *ngIf="history.length === 0" class="text-center">История заявок пуста</div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ================= МОДАЛЬНОЕ ОКНО ДЛЯ РЕДАКТИРОВАНИЯ ================= -->
+<div *ngIf="editModalVisible" class="modal-overlay" (click)="closeEditModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Редактирование заявки</h2>
+      <button class="modal-close" (click)="closeEditModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Название</label>
+        <input [(ngModel)]="editForm.title" class="form-control" placeholder="Введите название">
+      </div>
+      <div class="form-group">
+        <label>Описание</label>
+        <textarea [(ngModel)]="editForm.description" rows="6" class="form-control" placeholder="Введите описание"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Оборудование</label>
+        <select [(ngModel)]="editForm.equipmentId" class="form-control">
+          <option [value]="null">Выберите оборудование</option>
+          <option *ngFor="let eq of equipments" [value]="eq.id_equipment" [selected]="eq.id_equipment === editForm.equipmentId">
+            {{ eq.name }} ({{ eq.serial_number }})
+          </option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Категория</label>
+        <select [(ngModel)]="editForm.categoryId" class="form-control">
+          <option [value]="null">Выберите категорию</option>
+          <option *ngFor="let cat of categories" [value]="cat.id_category" [selected]="cat.id_category === editForm.categoryId">
+            {{ cat.name }}
+          </option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Статус</label>
+        <div class="status-display">
+          <span class="status-badge" [ngClass]="getStatusClass(editForm.status)">
+            {{ getStatusLabel(editForm.status) }}
+          </span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Дата создания</label>
+        <div class="info-display">{{ formatDate(editingRequest?.created_at || '') }}</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="secondary-btn" (click)="closeEditModal()">Отмена</button>
+      <button class="primary-btn" (click)="saveEditModal()" [disabled]="isLoading">
+        {{ isLoading ? 'Сохранение...' : 'Сохранить' }}
+      </button>
+    </div>
+  </div>
+</div>
